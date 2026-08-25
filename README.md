@@ -215,7 +215,7 @@ From the `bag-poc` directory holding all three clones:
 ```bash
 (cd bag-service && mvn -q package -DskipTests)
 (cd bag-xapi    && mvn -q package -DskipTests)
-(cd bag-ui      && npm install)
+(cd bag-ui      && npm ci)
 
 APP_VERSION=1.9 java -jar bag-service/target/bag-service-0.0.1-SNAPSHOT.jar --server.port=8082 &
 APP_VERSION=2.2 BAG_SERVICE_URL=http://localhost:8082 \

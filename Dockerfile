@@ -3,8 +3,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Dependencies first so source-only changes reuse the cached layer.
-COPY package.json ./
-RUN npm install --omit=dev --no-audit --no-fund
+# `npm ci` installs exactly what the lockfile pins and fails if the two have drifted,
+# so a CI build can never quietly resolve a different dependency tree than a local one.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY server.js ./
 COPY src ./src
