@@ -1,0 +1,122 @@
+name: Deploy
+
+# Build one version of bag-ui, push it to Artifact Registry, and roll it out to GKE.
+#
+# Which version gets built:
+#   push to main            -> 1.0 (this app's default — the version the catch-all route serves)
+#   push to any other branch -> the branch name, sanitised (so branch `feature1` builds version feature1)
+#   manual run              -> whatever you type in the "version" input
+#
+# Nothing here selects a version at *runtime* — that is the mesh's job. This only decides
+# which version label a new set of pods carries.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build and deploy (e.g. 1.0, feature1)'
+        required: false
+        type: string
+
+# One rollout at a time per branch; never cancel a deploy mid-flight.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APP: bag-ui
+  DEFAULT_VERSION: '1.0'
+  NAMESPACE: bag
+
+jobs:
+  deploy:
+    # Skipped until the GCP repo variables exist, so adding this file does not
+    # produce a failing run before the cloud setup is done.
+    if: vars.WIF_PROVIDER != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write        # required to mint the OIDC token for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: v
+        # Inputs go through the environment rather than ${{ }} interpolation so a
+        # branch or input name can never be spliced into this shell script.
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION="$INPUT_VERSION"
+          if [ -z "$VERSION" ]; then
+            if [ "$REF_NAME" = "main" ]; then VERSION="$DEFAULT_VERSION"; else VERSION="$REF_NAME"; fi
+          fi
+          # Kubernetes object names must be DNS-safe: 1.10 -> 1-10, feature/foo -> feature-foo
+          DNS=$(printf '%s' "$VERSION" | tr '[:upper:]' '[:lower:]' | sed -E -e 's/[^a-z0-9]+/-/g' -e 's/^-//' -e 's/-$//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dns=$DNS" >> "$GITHUB_OUTPUT"
+          echo "### $APP \`$VERSION\` -> $APP-$DNS" >> "$GITHUB_STEP_SUMMARY"
+
+      # Keyless: GitHub mints an OIDC token, GCP trades it for a short-lived
+      # access token. No service account JSON key is ever stored in this repo.
+      - uses: google-github-actions/auth@v2
+        id: auth
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: gke-gcloud-auth-plugin
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.GAR_LOCATION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build and push image
+        id: image
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          IMAGE="${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/bag-poc/$APP:$VERSION"
+          # --platform linux/amd64 is explicit so a future arm64 runner cannot
+          # silently produce an image GKE's nodes refuse to exec.
+          docker build --platform linux/amd64 -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ vars.GKE_CLUSTER }}
+          location: ${{ vars.GKE_LOCATION }}
+
+      - name: Roll out
+        env:
+          DNS: ${{ steps.v.outputs.dns }}
+          VERSION: ${{ steps.v.outputs.version }}
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          MANIFEST="k8s/deployment-$DNS.yaml"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::$MANIFEST not found. To ship version $VERSION, copy an existing" \
+                 "k8s/deployment-*.yaml to $MANIFEST, set the Deployment name to $APP-$DNS and the" \
+                 "\`version\` label to $VERSION (three places), then commit it."
+            exit 1
+          fi
+
+          # The Service spans every version, so applying it is idempotent and safe
+          # from any version's pipeline.
+          kubectl apply -f k8s/service.yaml
+
+          # Pin the manifest to the exact image this run built, rather than trusting
+          # the placeholder registry committed in the file.
+          sed -E "s#^([[:space:]]*)image:.*#\1image: $IMAGE#" "$MANIFEST" | kubectl apply -f -
+
+          kubectl -n "$NAMESPACE" rollout status "deployment/$APP-$DNS" --timeout=180s
+          kubectl -n "$NAMESPACE" get pods -l "app=$APP" -L version
