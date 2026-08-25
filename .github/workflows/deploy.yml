@@ -102,6 +102,17 @@ jobs:
           VERSION: ${{ steps.v.outputs.version }}
           IMAGE: ${{ steps.image.outputs.image }}
         run: |
+          # A namespace without the injection label produces 1/1 pods with no sidecar:
+          # everything looks healthy, and no cookie routing works. Fail loudly instead.
+          if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+            echo "::error::Namespace $NAMESPACE does not exist. Run: kubectl create namespace $NAMESPACE && kubectl label namespace $NAMESPACE istio-injection=enabled"
+            exit 1
+          fi
+          if [ "$(kubectl get namespace "$NAMESPACE" -o jsonpath='{.metadata.labels.istio-injection}')" != "enabled" ]; then
+            echo "::error::Namespace $NAMESPACE is missing istio-injection=enabled. Pods would start without a sidecar and no cookie routing would apply. Run: kubectl label namespace $NAMESPACE istio-injection=enabled"
+            exit 1
+          fi
+
           MANIFEST="k8s/deployment-$DNS.yaml"
           if [ ! -f "$MANIFEST" ]; then
             echo "::error::$MANIFEST not found. To ship version $VERSION, copy an existing" \
