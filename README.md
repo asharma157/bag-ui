@@ -16,6 +16,10 @@ traffic. The cookies are independent: Dev A pinning `bag_service=1.10` and Dev B
 `bag_orch=2.3` at the same time see completely different chains, and every other user keeps
 getting the default versions.
 
+> **Deploying it?** [DEPLOYMENT.md](DEPLOYMENT.md) is the step-by-step runbook — GCP project and
+> billing, Artifact Registry, keyless GitHub→GCP auth, the cluster, Istio, the CI/CD pipelines,
+> and the demo — with a TL;DR per milestone.
+
 ---
 
 ## What this POC actually proves
