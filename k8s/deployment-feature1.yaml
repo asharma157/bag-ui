@@ -1,0 +1,71 @@
+# bag-ui feature1 — a developer branch build; pinned with bag_fed=feature1
+#
+# One Deployment per version. The pod's `version` label is the single source of truth:
+# Istio's DestinationRule builds its subsets from it, and the downward API feeds the same value
+# into APP_VERSION so the app reports exactly the version it was scheduled as.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bag-ui-feature1
+  namespace: bag
+  labels:
+    app: bag-ui
+    version: "feature1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bag-ui
+      version: "feature1"
+  template:
+    metadata:
+      labels:
+        app: bag-ui
+        version: "feature1"
+    spec:
+      # GKE Spot VMs are tainted when node auto-provisioning applies the taint; harmless otherwise.
+      tolerations:
+        - key: cloud.google.com/gke-spot
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      containers:
+        - name: bag-ui
+          image: us-central1-docker.pkg.dev/PROJECT_ID/bag-poc/bag-ui:feature1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['version']
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 96Mi
+            limits:
+              memory: 192Mi
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

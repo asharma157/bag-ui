@@ -1,0 +1,23 @@
+# ONE Service per app, fronting every version of that app.
+#
+# The selector matches only `app: bag-ui` — deliberately NOT `version` — so all version
+# subsets sit behind the single, constant hostname http://bag-ui:8080. Callers never encode a
+# version in the URL; the Istio DestinationRule slices this Service into per-version subsets and
+# the VirtualService picks one based on the bag_fed cookie, at the ingress gateway.
+apiVersion: v1
+kind: Service
+metadata:
+  name: bag-ui
+  namespace: bag
+  labels:
+    app: bag-ui
+spec:
+  selector:
+    app: bag-ui
+  ports:
+    # The port name MUST start with `http` or Envoy treats the traffic as opaque TCP
+    # and header/cookie matching silently stops working.
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP

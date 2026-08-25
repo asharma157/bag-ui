@@ -1,0 +1,16 @@
+{
+  "name": "bag-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend layer of the cookie-based per-layer version routing POC",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

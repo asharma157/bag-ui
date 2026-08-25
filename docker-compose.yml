@@ -1,0 +1,77 @@
+# Local validation of HEADER PROPAGATION — not of routing.
+#
+# There is no mesh here, so no sidecar can read a cookie and pick a version: compose can only
+# prove that each app forwards the routing context it received onto its downstream call. That is
+# the part that lives in application code and the part the enterprise apps do not do today. Once
+# propagation is proven here, the mesh does the rest on GKE.
+#
+# The constant hostnames the apps call (http://bag-xapi:8080, http://bag-service:8080) resolve
+# here through compose service names and network aliases, exactly as they resolve through
+# Kubernetes Services in the cluster. No application config changes between the two environments.
+#
+# The three apps are separate repositories. This file lives in bag-ui and reaches its siblings
+# through relative build contexts, so clone all three next to each other:
+#
+#   bag-poc/
+#   ├── bag-ui/        <- you are here; run compose from this directory
+#   ├── bag-xapi/
+#   └── bag-service/
+#
+#   docker compose up --build
+#   open http://localhost:8080
+#
+services:
+  bag-ui:
+    build: .
+    image: bag-ui:1.0
+    environment:
+      APP_VERSION: "1.0"
+      POD_NAME: bag-ui-1-0-local
+      # Same constant the app defaults to; stated here only to make the wiring visible.
+      BAG_XAPI_URL: http://bag-xapi:8080
+    ports:
+      - "8080:8080"
+    networks: [bag]
+    depends_on: [bag-xapi]
+
+  bag-xapi:
+    build: ../bag-xapi
+    image: bag-xapi:2.2
+    environment:
+      APP_VERSION: "2.2"
+      POD_NAME: bag-xapi-2-2-local
+      BAG_SERVICE_URL: http://bag-service:8080
+    ports:
+      - "8081:8080"
+    networks: [bag]
+    depends_on: [bag-service-1-9]
+
+  # The default backend. It claims the `bag-service` network alias, so the constant URL that
+  # bag-xapi calls resolves here — the local stand-in for "the subset the catch-all route points at".
+  bag-service-1-9:
+    build: ../bag-service
+    image: bag-service:1.9
+    environment:
+      APP_VERSION: "1.9"
+      POD_NAME: bag-service-1-9-local
+    ports:
+      - "8082:8080"
+    networks:
+      bag:
+        aliases: [bag-service]
+
+  # The candidate backend. Reachable directly on :8083 so the two item lists can be compared
+  # locally. Nothing routes to it through the chain — cookie routing needs the mesh.
+  bag-service-1-10:
+    build: ../bag-service
+    image: bag-service:1.10
+    environment:
+      APP_VERSION: "1.10"
+      POD_NAME: bag-service-1-10-local
+    ports:
+      - "8083:8080"
+    networks: [bag]
+
+networks:
+  bag:
+    driver: bridge

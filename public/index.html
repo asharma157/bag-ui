@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bag &mdash; per-layer version routing</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#128717;</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">&#128717;</span>
+      <span>Bag</span>
+    </div>
+    <div class="served-by">
+      served by <strong>bag-ui</strong>
+      <span class="chip" id="ui-version-chip">&hellip;</span>
+      <span class="instance" id="ui-instance"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Routing cookies</h2>
+        <p class="hint">
+          Each cookie pins one layer and nothing else. Leave one unset and that layer serves
+          whichever version currently takes 100% of default traffic. These cookies live in
+          <em>your</em> browser only &mdash; no other user's traffic is affected.
+        </p>
+      </div>
+
+      <div class="cookie-grid" id="cookie-grid"></div>
+
+      <div class="panel-actions">
+        <button class="btn btn-ghost" id="clear-all">Clear all cookies</button>
+        <button class="btn" id="refresh">Refresh request</button>
+        <span class="note" id="reload-note" hidden>
+          bag_fed is matched at the ingress gateway &mdash; reloading the page to pick up the new UI version&hellip;
+        </span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Which version served this request</h2>
+        <p class="hint">Every layer stamps its own version onto its response; nothing here is guessed.</p>
+      </div>
+      <div class="table-scroll">
+        <table class="grid" id="chain-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Pinned by</th>
+              <th>Requested</th>
+              <th>Serving version</th>
+              <th>Pod / instance</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Header propagation</h2>
+        <p class="hint">
+          What each layer reported <em>receiving</em>. If a value is present at every hop, the
+          outbound clients are forwarding the routing context correctly &mdash; the thing the
+          enterprise apps do not do today.
+        </p>
+      </div>
+      <div class="table-scroll">
+        <table class="grid" id="propagation-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>bag_fed</th>
+              <th>bag_orch</th>
+              <th>bag_service</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Your bag</h2>
+        <p class="hint">Items come from bag-service; totals and promotions are applied by bag-xapi.</p>
+      </div>
+      <div id="bag-error" class="error" hidden></div>
+      <div class="table-scroll">
+        <table class="grid" id="items-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>SKU</th>
+              <th>Colour</th>
+              <th>Size</th>
+              <th class="num">Qty</th>
+              <th class="num">Unit</th>
+              <th class="num">Line</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="totals" id="totals"></div>
+    </section>
+
+    <section class="panel">
+      <details>
+        <summary>Raw response from <code>GET /api/bags</code></summary>
+        <pre id="raw"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
