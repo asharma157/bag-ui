@@ -162,9 +162,9 @@ Clone the three repos side by side, then bring the stack up from `bag-ui`:
 
 ```bash
 mkdir bag-poc && cd bag-poc
-git clone <bag-ui-url>      bag-ui
-git clone <bag-xapi-url>    bag-xapi
-git clone <bag-service-url> bag-service
+git clone https://github.com/asharma157/bag-ui.git      bag-ui
+git clone https://github.com/asharma157/bag-xapi.git    bag-xapi
+git clone https://github.com/asharma157/bag-service.git bag-service
 
 cd bag-ui
 docker compose up --build
