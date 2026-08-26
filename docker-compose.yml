@@ -60,8 +60,10 @@ services:
       bag:
         aliases: [bag-service]
 
-  # The candidate backend. Reachable directly on :8083 so the two item lists can be compared
-  # locally. Nothing routes to it through the chain — cookie routing needs the mesh.
+  # The candidate backend, reachable directly on :8083. Built from the same working tree as the
+  # container above, so it differs only in the version it reports; check out a branch with
+  # different bag contents to see them diverge. Nothing routes to it through the chain —
+  # cookie routing needs the mesh.
   bag-service-1-10:
     build: ../bag-service
     image: bag-service:1.10

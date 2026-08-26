@@ -80,7 +80,7 @@ bag-xapi/
 
 bag-service/
 ├── src/main/java/com/example/bagservice/
-│   ├── service/BagService.java   the one service: hardcoded item lists per version
+│   ├── service/BagService.java   the one service: the hardcoded bag contents
 │   └── web/BagController.java    the one controller: /api/bags, /health
 ├── Dockerfile
 └── k8s/           deployment-1-9.yaml, deployment-1-10.yaml, deployment-feature1.yaml, service.yaml
@@ -94,7 +94,7 @@ No database, no auth, no persistent state. Every app exposes `/health`.
 |---|---|---|---|
 | `bag-ui` | `1.0`, `feature1` | `1.0` | version chip + accent colour on the page |
 | `bag-xapi` | `2.2`, `2.3` | `2.2` | `2.3` applies a `MEMBER10` 10% discount and quotes a delivery date |
-| `bag-service` | `1.9`, `1.10`, `feature1` | `1.9` | different item lists: 3 items / $467.00, 4 items / $662.00, 2 monogram items |
+| `bag-service` | `1.9`, `1.10`, `feature1` | `1.9` | the bag contents — whatever the branch that built that version returns |
 
 ---
 
@@ -202,6 +202,9 @@ curl -s localhost:8082/api/bags | jq '{version, itemCount, subtotal}'   # 1.9  �
 curl -s localhost:8083/api/bags | jq '{version, itemCount, subtotal}'   # 1.10 — the candidate
 ```
 
+Both are built from the same working tree, so they report different `version` values and identical
+contents. Check out a branch with a different item list and rebuild to see them diverge.
+
 | Port | Container |
 |---|---|
 | 8080 | `bag-ui` 1.0 |
@@ -300,10 +303,11 @@ gcloud artifacts docker tags add $REPO/bag-service:1.9 $REPO/bag-service:1.10
 gcloud artifacts docker tags add $REPO/bag-service:1.9 $REPO/bag-service:feature1
 ```
 
-> In a real pipeline each version is a distinct build of a distinct source revision, and the
-> version-keyed item lists inside `BagService` would just be the difference between two commits.
-> The behaviour that varies by version is driven by `APP_VERSION` only so this POC can demonstrate
-> several versions from one build.
+> Re-tagging one build as several versions gives you several version *labels* running side by
+> side, which is enough to prove the routing works — but every one of them serves identical
+> content, because it is the same code. To make a version actually behave differently, branch it,
+> change the code, and let the pipeline ship the branch as its own version: `git push -u origin
+> feature1` builds and deploys version `feature1`. That is the workflow the POC is arguing for.
 
 Building locally instead? On Apple Silicon you **must** cross-build, or the pods will crash-loop
 with `exec format error` on GKE's amd64 nodes:
@@ -379,8 +383,8 @@ of each layer served the request, what each layer received, and the bag contents
 user of the staging environment sees, throughout everything below.
 
 **Dev A tests a backend change.** Set `bag_service` to `1.10`, leave the others empty. The chain
-becomes `1.0 → 2.2 → 1.10`: four items, $662.00, a Weekender Duffel appears, the tote is
-repriced. The UI and orchestration versions did not move.
+becomes `1.0 → 2.2 → 1.10` — the `bag-service` row now names the `1.10` pod, and the bag shows
+whatever the branch built as `1.10` returns. The UI and orchestration versions did not move.
 
 **Dev B tests an orchestration change, at the same time.** In a different browser (or a private
 window), set only `bag_orch` to `2.3`. That session reads `1.0 → 2.3 → 1.9`: the same three items

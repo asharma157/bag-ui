@@ -278,8 +278,10 @@ gh workflow run deploy.yml --repo "$GITHUB_OWNER/bag-xapi"
 gh workflow run deploy.yml --repo "$GITHUB_OWNER/bag-ui"
 ```
 
-Then the extra versions the demo needs. Same code, different version label — the version-keyed
-item lists inside each app do the rest:
+Then the extra versions the demo needs. These re-deploy the same build under different version
+labels, which is enough to prove the routing works — every version will serve identical content
+until you branch the code. To make a version behave differently, push a branch: the pipeline
+builds the branch name as the version.
 
 ```bash
 gh workflow run deploy.yml --repo "$GITHUB_OWNER/bag-service" -f version=1.10
@@ -389,8 +391,9 @@ between this and the local run, where propagation works but nothing routes.
 
 Then the human version, which is what actually lands in a demo. Open `http://$GW` and:
 
-1. **Baseline** — clear all cookies. `1.0 → 2.2 → 1.9`, three items, $467.00.
-2. **Dev A** — set `bag_service=1.10`. Four items, $662.00. UI and orchestration unchanged.
+1. **Baseline** — clear all cookies. The chain reads `1.0 → 2.2 → 1.9`.
+2. **Dev A** — set `bag_service=1.10`. The `bag-service` row flips to the `1.10` pod and the bag
+   shows whatever the build behind `1.10` returns. UI and orchestration unchanged.
 3. **Dev B, in a private window at the same time** — set only `bag_orch=2.3`. Three items, but a
    `MEMBER10` discount and a delivery date. Dev A's window is unaffected; so is the baseline.
 4. **Dev C** — set all three. The page reloads, the accent colour changes, chain is
