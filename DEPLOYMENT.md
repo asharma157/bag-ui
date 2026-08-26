@@ -335,18 +335,30 @@ Use Kiali's request-routing wizard, per app:
 1. `istioctl dashboard kiali`
 2. **Services → bag-service → Actions → Request Routing**
 3. **Add Route Rule → Request Matching →** header `cookie`, match `regex`, value
-   `.*bag_service=1\.10(;.*)?` → route to subset `1.10`
+   `.*bag_service=1\.10(;.*)?` → route to the subset whose `version` label is `1.10`
 4. Repeat for `feature1`
-5. Add a final rule with **no** matching, 100% to `1.9` — the catch-all. It **must be last**;
-   Istio evaluates in order and first match wins
+5. Add a final rule with **no** matching, 100% to the `1.9` subset — the catch-all. It **must be
+   last**; Istio evaluates in order and first match wins
 6. **Create**
+
+> **Subset names cannot contain dots.** They must be DNS-1123 labels, so a subset for version
+> `1.10` has to be named something like `v1-10` — the *label selector* inside it keeps the real
+> string `version: "1.10"`. Kiali's wizard names subsets after the version value, which produces
+> `admission webhook "validation.istio.io" denied the request: subset name is invalid: 1.0`.
+> Rename the subset in the wizard, or apply the rules from YAML (below) and use Kiali to view and
+> validate them instead.
 
 Repeat for `bag-xapi` (`bag_orch` → `2.3`, catch-all `2.2`) and `bag-ui` (`bag_fed` → `feature1`,
 catch-all `1.0`). For `bag-ui`, open **Advanced Options → Gateways** and attach it to the ingress
 gateway, or browser traffic will never hit the rule.
 
-The equivalent YAML — if you would rather read it, review it, or hand it to a routing controller —
-is in the [appendix of the main README](README.md#appendix-reference-routing-rules).
+The complete YAML — Gateway, three DestinationRules, three VirtualServices, with correct subset
+names — is in the [appendix of the main README](README.md#appendix-reference-routing-rules).
+Applying it in one shot is often faster than six passes through the wizard, and Kiali reads and
+validates rules it did not create.
+
+**Deploy the extra versions before the rules that reference them.** A VirtualService routing to a
+subset with no running pods returns 503, so finish Milestone 6 first.
 
 Two details that cost people an afternoon:
 
