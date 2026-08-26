@@ -32,7 +32,9 @@ spec:
       containers:
         - name: bag-ui
           image: us-central1-docker.pkg.dev/PROJECT_ID/bag-poc/bag-ui:feature1
-          imagePullPolicy: IfNotPresent
+          # Version tags here are mutable — a rebuild of 1.9 keeps the tag 1.9 — so a node
+          # that has already cached the tag would silently keep running the old image.
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
