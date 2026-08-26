@@ -129,5 +129,12 @@ jobs:
           # the placeholder registry committed in the file.
           sed -E "s#^([[:space:]]*)image:.*#\1image: $IMAGE#" "$MANIFEST" | kubectl apply -f -
 
+          # The image tag IS the version, so it is identical between builds of the same version and
+          # an unchanged manifest applies as a no-op: the old pods keep running and the rollout
+          # "succeeds" without deploying anything. Stamping the commit onto the pod template makes
+          # a new build an actual change, so it rolls.
+          kubectl -n "$NAMESPACE" patch deployment "$APP-$DNS" \
+            -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"bag.poc/git-sha\":\"$GITHUB_SHA\"}}}}}"
+
           kubectl -n "$NAMESPACE" rollout status "deployment/$APP-$DNS" --timeout=180s
           kubectl -n "$NAMESPACE" get pods -l "app=$APP" -L version
