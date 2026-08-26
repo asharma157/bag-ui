@@ -12,7 +12,10 @@ COPY server.js ./
 COPY src ./src
 COPY public ./public
 
-USER node
+# Numeric, not `USER node`. Kubernetes' runAsNonRoot check cannot verify that a
+# *named* user is non-root and refuses to start the container; 1000 is the uid of
+# the image's built-in `node` user.
+USER 1000
 
 # APP_VERSION is supplied at runtime (downward API in Kubernetes, env in compose)
 # so the same image can be deployed as any version.
