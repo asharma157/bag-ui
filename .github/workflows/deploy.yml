@@ -54,8 +54,21 @@ jobs:
           if [ -z "$VERSION" ]; then
             if [ "$REF_NAME" = "main" ]; then VERSION="$DEFAULT_VERSION"; else VERSION="$REF_NAME"; fi
           fi
-          # Kubernetes object names must be DNS-safe: 1.10 -> 1-10, feature/foo -> feature-foo
-          DNS=$(printf '%s' "$VERSION" | tr '[:upper:]' '[:lower:]' | sed -E -e 's/[^a-z0-9]+/-/g' -e 's/^-//' -e 's/-$//')
+
+          # The version has to be legal as a Docker tag AND as a Kubernetes label value, so it is
+          # lowercased and stripped of anything outside [a-z0-9._-]. A branch name is the obvious
+          # source of a version, and branch names routinely contain slashes, which tags reject:
+          #   feature/bag-new -> feature-bag-new
+          VERSION=$(printf '%s' "$VERSION" | tr '[:upper:]' '[:lower:]' \
+            | sed -E -e 's#[^a-z0-9._-]+#-#g' -e 's/^[-._]+//' -e 's/[-._]+$//')
+
+          # Kubernetes object names are stricter still — DNS-1123, so dots become dashes too:
+          #   1.10 -> 1-10
+          DNS=$(printf '%s' "$VERSION" | sed -E -e 's/[^a-z0-9]+/-/g' -e 's/^-//' -e 's/-$//')
+
+          if [ -z "$VERSION" ] || [ -z "$DNS" ]; then
+            echo "::error::Could not derive a usable version from '$REF_NAME'"; exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "dns=$DNS" >> "$GITHUB_OUTPUT"
           echo "### $APP \`$VERSION\` -> $APP-$DNS" >> "$GITHUB_STEP_SUMMARY"
@@ -115,11 +128,21 @@ jobs:
 
           MANIFEST="k8s/deployment-$DNS.yaml"
           if [ ! -f "$MANIFEST" ]; then
-            echo "::error::$MANIFEST not found. To ship version $VERSION, copy an existing" \
-                 "k8s/deployment-*.yaml to $MANIFEST, set the Deployment name to $APP-$DNS and the" \
-                 "\`version\` label to $VERSION (three places), then commit it."
-            exit 1
+            # A developer shipping a branch should not have to hand-write a manifest first —
+            # that friction is exactly what this POC argues against. Render one from the default
+            # version's manifest, changing only the name and the version label.
+            BASE="k8s/deployment-$(printf '%s' "$DEFAULT_VERSION" | sed -E 's/[^a-z0-9]+/-/g').yaml"
+            if [ ! -f "$BASE" ]; then
+              echo "::error::Neither $MANIFEST nor the base manifest $BASE exists."; exit 1
+            fi
+            echo "::notice::No $MANIFEST — rendering one from $BASE for version $VERSION. Commit it if this version is here to stay."
+            RENDERED="$RUNNER_TEMP/deployment-$DNS.yaml"
+            sed -E -e "s#^([[:space:]]*)name: $APP-.*#\1name: $APP-$DNS#" \
+                   -e "s#^([[:space:]]*)version: \".*\"#\1version: \"$VERSION\"#" \
+                   "$BASE" > "$RENDERED"
+            MANIFEST="$RENDERED"
           fi
+          echo "--- manifest being applied ---"; grep -E 'name:|version:|image:' "$MANIFEST" | head -8
 
           # The Service spans every version, so applying it is idempotent and safe
           # from any version's pipeline.
