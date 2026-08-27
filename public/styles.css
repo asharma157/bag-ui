@@ -132,5 +132,57 @@ table.grid code { font-size: 12px; }
 
 .error { color: var(--danger); font-size: 13px; margin-bottom: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+/* Collapsible panels. The summary carries a live status line, so a collapsed section still
+   answers its own question without being opened. */
+details summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+details summary::-webkit-details-marker { display: none; }
+
+details summary::before {
+  content: "";
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--muted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transform: translateY(-1px);
+  transition: transform 120ms ease;
+}
+
+details[open] summary::before { transform: rotate(90deg) translateX(-1px); }
+
+details summary:hover .sum-title { color: var(--text); }
+details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.sum-title {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sum-status {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.sum-status .sep { opacity: 0.45; padding: 0 2px; }
+
+.details-body { padding-top: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  details summary::before { transition: none; }
+}
 pre { overflow-x: auto; font-size: 12px; background: var(--bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }

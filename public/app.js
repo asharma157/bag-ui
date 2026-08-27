@@ -84,6 +84,7 @@ function money(value, currency) {
 
 function renderCookieControls() {
   const jar = readCookies();
+  renderCookieSummary();
   const grid = document.getElementById('cookie-grid');
   grid.replaceChildren();
 
@@ -142,7 +143,35 @@ function afterCookieChange(cookie) {
   load();
 }
 
+/** One-line answer shown on the collapsed "which version served" summary. */
+function renderChainSummary(chain) {
+  const target = document.getElementById('chain-summary');
+  target.replaceChildren();
+  const hops = chain ?? [];
+  hops.forEach((hop, i) => {
+    if (i > 0) target.append(el('span', { className: 'sep' }, '\u2192'));
+    target.append(el('span', {}, hop.servingVersion ?? '?'));
+  });
+}
+
+/** One-line answer shown on the collapsed "routing cookies" summary. */
+function renderCookieSummary() {
+  const jar = readCookies();
+  const set = COOKIES.filter((c) => jar[c.name]);
+  const target = document.getElementById('cookie-summary');
+  target.replaceChildren();
+  if (!set.length) {
+    target.append(el('span', {}, 'none set \u2014 all layers default'));
+    return;
+  }
+  set.forEach((cookie, i) => {
+    if (i > 0) target.append(el('span', { className: 'sep' }, '\u00b7'));
+    target.append(el('span', {}, `${cookie.name}=${jar[cookie.name]}`));
+  });
+}
+
 function renderChain(chain) {
+  renderChainSummary(chain);
   const body = document.querySelector('#chain-table tbody');
   body.replaceChildren();
   for (const hop of chain ?? []) {

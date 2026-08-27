@@ -23,72 +23,6 @@
   <main>
     <section class="panel">
       <div class="panel-head">
-        <h2>Routing cookies</h2>
-        <p class="hint">
-          Each cookie pins one layer and nothing else. Leave one unset and that layer serves
-          whichever version currently takes 100% of default traffic. These cookies live in
-          <em>your</em> browser only &mdash; no other user's traffic is affected.
-        </p>
-      </div>
-
-      <div class="cookie-grid" id="cookie-grid"></div>
-
-      <div class="panel-actions">
-        <button class="btn btn-ghost" id="clear-all">Clear all cookies</button>
-        <button class="btn" id="refresh">Refresh request</button>
-        <span class="note" id="reload-note" hidden>
-          bag_fed is matched at the ingress gateway &mdash; reloading the page to pick up the new UI version&hellip;
-        </span>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Which version served this request</h2>
-        <p class="hint">Every layer stamps its own version onto its response; nothing here is guessed.</p>
-      </div>
-      <div class="table-scroll">
-        <table class="grid" id="chain-table">
-          <thead>
-            <tr>
-              <th>Layer</th>
-              <th>Pinned by</th>
-              <th>Requested</th>
-              <th>Serving version</th>
-              <th>Pod / instance</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Header propagation</h2>
-        <p class="hint">
-          What each layer reported <em>receiving</em>. If a value is present at every hop, the
-          outbound clients are forwarding the routing context correctly &mdash; the thing the
-          enterprise apps do not do today.
-        </p>
-      </div>
-      <div class="table-scroll">
-        <table class="grid" id="propagation-table">
-          <thead>
-            <tr>
-              <th>Layer</th>
-              <th>bag_fed</th>
-              <th>bag_orch</th>
-              <th>bag_service</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
         <h2>Your bag</h2>
         <p class="hint">Items come from bag-service; totals and promotions are applied by bag-xapi.</p>
       </div>
@@ -114,9 +48,87 @@
 
     <section class="panel">
       <details>
-        <summary>Raw response from <code>GET /api/bags</code></summary>
-        <pre id="raw"></pre>
+        <summary>
+          <span class="sum-title">Raw response from <code>GET /api/bags</code></span>
+        </summary>
+        <div class="details-body">
+          <pre id="raw"></pre>
+        </div>
       </details>
+    </section>
+
+    <section class="panel">
+      <details>
+        <summary>
+          <span class="sum-title">Which version served this request</span>
+          <span class="sum-status" id="chain-summary"></span>
+        </summary>
+        <div class="details-body">
+          <p class="hint">Every layer stamps its own version onto its response; nothing here is guessed.</p>
+          <div class="table-scroll">
+            <table class="grid" id="chain-table">
+              <thead>
+                <tr>
+                  <th>Layer</th>
+                  <th>Pinned by</th>
+                  <th>Requested</th>
+                  <th>Serving version</th>
+                  <th>Pod / instance</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel">
+      <details>
+        <summary>
+          <span class="sum-title">Routing cookies</span>
+          <span class="sum-status" id="cookie-summary"></span>
+        </summary>
+        <div class="details-body">
+          <p class="hint">
+            Each cookie pins one layer and nothing else. Leave one unset and that layer serves
+            whichever version currently takes 100% of default traffic. These cookies live in
+            <em>your</em> browser only &mdash; no other user's traffic is affected.
+          </p>
+          <div class="cookie-grid" id="cookie-grid"></div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="clear-all">Clear all cookies</button>
+            <button class="btn" id="refresh">Refresh request</button>
+            <span class="note" id="reload-note" hidden>
+              bag_fed is matched at the ingress gateway &mdash; reloading the page to pick up the new UI version&hellip;
+            </span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Header propagation</h2>
+        <p class="hint">
+          What each layer reported <em>receiving</em>. If a value is present at every hop, the
+          outbound clients are forwarding the routing context correctly &mdash; the thing the
+          enterprise apps do not do today.
+        </p>
+      </div>
+      <div class="table-scroll">
+        <table class="grid" id="propagation-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>bag_fed</th>
+              <th>bag_orch</th>
+              <th>bag_service</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
